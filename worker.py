@@ -15,7 +15,12 @@ class Worker:
     def run(self) -> None:
         while True:
             _, task = self.task_queue.broker.brpop('tasks', 0)
-            task = json.loads(task)
+
+            try:
+                task = json.loads(task)
+            except Exception as e:
+                print(f'Error {e}')
+                continue
 
             task_id = task['task_id']
 
