@@ -1,5 +1,6 @@
 import json
 import importlib
+from typing import Any
 
 from client import RedisTaskQueue
 
@@ -7,6 +8,9 @@ from client import RedisTaskQueue
 class Worker:
     def __init__(self, task_queue: 'RedisTaskQueue'):
         self.task_queue = task_queue
+
+    def set_result(self, key: str, value: Any) -> None:
+        self.task_queue.broker.set(key, json.dumps(value), ex=300)
 
     def run(self) -> None:
         while True:
@@ -23,7 +27,7 @@ class Worker:
 
             try:
                 result = func(*args, **kwargs)
-                self.task_queue.broker.set(f'result:{task_id}', json.dumps(result))
+                self.set_result(f'result:{task_id}', {'status': 'success', 'result': result})
                 print(f'The function was completed successfully. ID {task_id}')
             except Exception as e:
                 print(f'Error: {e}')
@@ -33,4 +37,4 @@ class Worker:
                 else:
                     print(f'The number of attempts has been exhausted. ID {task_id}')
                     task['status'] = 'failure'
-                    self.task_queue.broker.set(f'result:{task_id}', json.dumps(task))
+                    self.set_result(f'result:{task_id}', {'status': 'failure', 'result': str(e)})
