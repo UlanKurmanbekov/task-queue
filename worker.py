@@ -24,13 +24,13 @@ class Worker:
 
             task_id = task['task_id']
 
-            module_name, func_name = task['task_name'].rsplit('.', 1)
-            module = importlib.import_module(module_name)
-            func = getattr(module, func_name)
-            args = task['args']
-            kwargs = task['kwargs']
-
             try:
+                module_name, func_name = task['task_name'].rsplit('.', 1)
+                module = importlib.import_module(module_name)
+                func = getattr(module, func_name)
+                args = task['args']
+                kwargs = task['kwargs']
+
                 result = func(*args, **kwargs)
                 self.set_result(f'result:{task_id}', {'status': 'success', 'result': result})
                 print(f'The function was completed successfully. ID {task_id}')
