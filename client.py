@@ -1,4 +1,5 @@
 import json
+import time
 from uuid import uuid4
 from typing import Callable, Any
 
@@ -13,7 +14,7 @@ class Task:
     def __call__(self, *args, **kwargs) -> Any:
         return self._func(*args, **kwargs)
 
-    def delay(self, *args, **kwargs) -> str:
+    def delay(self, *args, **kwargs) -> 'Result':
         task_id = str(uuid4())
         task = {
             'task_id': task_id,
@@ -24,7 +25,7 @@ class Task:
             'status': 'pending'
         }
         self._task_queue.enqueue(json.dumps(task))
-        return task_id
+        return Result(task_id, self._task_queue)
 
 
 class RedisTaskQueue:
@@ -36,3 +37,21 @@ class RedisTaskQueue:
 
     def enqueue(self, task: str) -> None:
         self.broker.lpush('tasks', task)
+
+
+class Result:
+    def __init__(self, task_id: str, task_queue: 'RedisTaskQueue') -> None:
+        self.task_id = task_id
+        self._task_queue = task_queue
+
+    def get(self, timeout: int = 5) -> dict:
+        deadline = time.time() + timeout
+
+        while time.time() < deadline:
+            task = self._task_queue.broker.get(f'result:{self.task_id}')
+
+            if task is None:
+                time.sleep(0.5)
+            else:
+                return json.loads(task.decode())
+        raise TimeoutError(f'Task {self.task_id} did not complete within {timeout}s')
