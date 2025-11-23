@@ -10,7 +10,8 @@ class Worker:
         self.task_queue = task_queue
 
     def set_result(self, key: str, value: Any) -> None:
-        self.task_queue.broker.set(key, json.dumps(value), ex=300)
+        self.task_queue.broker.lpush(key, json.dumps(value))
+        self.task_queue.broker.expire(key, 300)
 
     def run(self) -> None:
         while True:

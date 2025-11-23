@@ -45,13 +45,8 @@ class Result:
         self._task_queue = task_queue
 
     def get(self, timeout: int = 5) -> dict:
-        deadline = time.time() + timeout
+        _, task = self._task_queue.broker.blpop(f'result:{self.task_id}')
 
-        while time.time() < deadline:
-            task = self._task_queue.broker.get(f'result:{self.task_id}')
-
-            if task is None:
-                time.sleep(0.5)
-            else:
-                return json.loads(task.decode())
+        if task:
+            return json.loads(task)
         raise TimeoutError(f'Task {self.task_id} did not complete within {timeout}s')
